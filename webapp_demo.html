@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cheque Data Extractor</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Custom styles for Inter font and general body aesthetics */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f0f4f8; /* Light gray background */
+            display: flex;
+            justify-content: center;
+            align-items: flex-start; /* Align to start to allow scrolling for content */
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            background-color: #ffffff;
+            border-radius: 1rem; /* Rounded corners */
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+            padding: 2.5rem; /* Increased padding */
+            /* Adjusted max-width for better desktop viewing, while keeping it responsive */
+            max-width: 1200px; /* Increased from 1000px */
+            width: 100%;
+            text-align: center;
+            overflow-x: auto; /* Allow horizontal scroll for table */
+        }
+        input[type="file"] {
+            border: 2px dashed #cbd5e1; /* Dashed border for file input */
+            padding: 1.5rem;
+            border-radius: 0.75rem;
+            background-color: #f8fafc;
+            cursor: pointer;
+            width: 100%;
+            text-align: center;
+            margin-bottom: 1.5rem;
+            transition: border-color 0.2s ease-in-out;
+        }
+        input[type="file"]:hover {
+            border-color: #94a3b8;
+        }
+        .button-primary {
+            background-color: #4f46e5; /* Indigo */
+            color: white;
+            padding: 0.8rem 2rem;
+            border-radius: 0.75rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.3s ease, transform 0.2s ease;
+            box-shadow: 0 4px 10px rgba(79, 70, 229, 0.3);
+            border: none;
+            display: inline-block;
+        }
+        .button-primary:hover {
+            background-color: #4338ca; /* Darker indigo */
+            transform: translateY(-2px);
+        }
+        .button-primary:active {
+            transform: translateY(0);
+            box-shadow: 0 2px 5px rgba(79, 70, 229, 0.3);
+        }
+        .message-box {
+            background-color: #fff;
+            border-radius: 0.75rem;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+            padding: 1.5rem;
+            max-width: 400px;
+            margin: 20px auto;
+            text-align: center;
+        }
+        .message-box button {
+            background-color: #ef4444; /* Red for close */
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            border: none;
+            cursor: pointer;
+            margin-top: 1rem;
+        }
+        .message-box button:hover {
+            background-color: #dc2626;
+        }
+        table {
+            width: 100%;
+            border-collapse: separate; /* Use separate for rounded corners on cells */
+            border-spacing: 0;
+            margin-top: 2rem;
+            border-radius: 0.75rem;
+            overflow: hidden; /* Hide overflow for rounded corners */
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+        }
+        th, td {
+            padding: 1rem;
+            text-align: left;
+            border-bottom: 1px solid #e2e8f0;
+            white-space: nowrap; /* Prevent text wrapping in cells */
+        }
+        th {
+            background-color: #e0e7ff; /* Light indigo for headers */
+            font-weight: 700;
+            color: #312e81; /* Darker indigo text */
+            text-transform: uppercase;
+            font-size: 0.875rem;
+        }
+        tr:last-child td {
+            border-bottom: none;
+        }
+        tr:nth-child(even) {
+            background-color: #f8fafc; /* Lightest gray for even rows */
+        }
+        tr:hover {
+            background-color: #eff6ff; /* Lighter blue on hover */
+        }
+
+        /* Responsive table for smaller screens */
+        @media (max-width: 768px) {
+            table {
+                display: block;
+                overflow-x: auto;
+            }
+            thead {
+                display: none; /* Hide table header on small screens */
+            }
+            tr {
+                display: block;
+                margin-bottom: 1rem;
+                border: 1px solid #e2e8f0;
+                border-radius: 0.75rem;
+                overflow: hidden;
+            }
+            td {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                border-bottom: 1px solid #e2e8f0;
+                padding: 0.75rem 1rem;
+                white-space: normal; /* Allow text wrapping in cells */
+            }
+            td:last-child {
+                border-bottom: none;
+            }
+            td:before {
+                content: attr(data-label);
+                font-weight: 600;
+                color: #4b5563; /* Gray-700 */
+                margin-right: 1rem;
+            }
+        }
+    </style>
+</head>
+<body class="selection:bg-indigo-300">
+    <div class="container flex flex-col items-center">
+        <h1 class="text-3xl font-extrabold text-gray-800 mb-6">Cheque Data Extractor</h1>
+        <p class="text-gray-600 mb-8">Upload cheque images (JPEG/PNG) to extract structured data.</p>
+
+        <input type="file" id="chequeInput" multiple accept="image/jpeg,image/png" class="mb-4 text-gray-700">
+        <button id="uploadButton" class="button-primary mb-8">
+            <svg class="w-5 h-5 mr-2 inline-block" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
+            Upload & Extract
+        </button>
+
+        <div id="imagePreviewContainer" class="hidden my-8 w-full max-w-md mx-auto">
+            <h3 class="text-xl font-semibold text-gray-700 mb-4">Uploaded Cheque Image:</h3>
+            <img id="imagePreview" src="#" alt="Cheque Image Preview" class="rounded-lg shadow-lg w-full h-auto object-contain max-h-[400px]">
+        </div>
+
+        <div id="loadingMessage" class="hidden text-center text-indigo-600 mb-4 text-lg font-semibold">
+            <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-500 inline-block mr-3"></div>
+            Processing images, please wait...
+        </div>
+
+        <div id="errorMessage" class="hidden message-box bg-red-100 text-red-700 border border-red-400">
+            <p class="font-bold mb-2">Error:</p>
+            <p id="errorText"></p>
+            <button onclick="document.getElementById('errorMessage').classList.add('hidden')">Close</button>
+        </div>
+
+        <div id="apiKeyWarning" class="hidden message-box bg-yellow-100 text-yellow-800 border border-yellow-400">
+            <p class="font-bold mb-2">API Key Required!</p>
+            <p>Please open this HTML file in a text editor (like Notepad), find the line `const apiKey = "YOUR_ACTUAL_GEMINI_API_KEY_HERE";` and replace the placeholder with your actual Gemini API key. Then save the file and refresh this page.</p>
+            <p class="mt-2 text-sm">You can get an API key from <a href="https://aistudio.google.com/app/apikey" target="_blank" class="text-blue-600 hover:underline">Google AI Studio</a>.</p>
+        </div>
+
+        <div id="resultsDisplay" class="w-full">
+            <h2 id="resultsTitle" class="text-2xl font-bold text-gray-800 mb-4 hidden">Extracted Cheque Data</h2>
+            <div id="resultsTable" class="w-full"></div>
+        </div>
+    </div>
+
+    <script>
+        console.log('SCRIPT LOADING: Main JavaScript started.');
+
+        // IMPORTANT: Replace with your actual Gemini API key
+        const apiKey = "AIzaSyDYBPoH8u9ipspK4rgV_AwTJlF9kOL-P2A"; 
+        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+
+        function showMessage(type, message) {
+            const currentErrorMessage = document.getElementById('errorMessage');
+            const currentErrorText = document.getElementById('errorText');
+            if (currentErrorMessage && currentErrorText) {
+                currentErrorMessage.classList.remove('hidden', 'bg-red-100', 'bg-green-100', 'text-red-700', 'text-green-700');
+                currentErrorMessage.classList.add(type === 'error' ? 'bg-red-100' : 'bg-green-100', type === 'error' ? 'text-red-700' : 'text-green-700', 'border', type === 'error' ? 'border-red-400' : 'border-green-400');
+                currentErrorText.textContent = message;
+            } else {
+                console.error("Error elements not found to display message:", message);
+            }
+        }
+
+        function normalizeAmountFigure(amountStr) {
+            if (!amountStr) {
+                return 0.0;
+            }
+            const normalizedStr = amountStr.replace(/[₹$,]/g, '').trim();
+            try {
+                return parseFloat(normalizedStr);
+            } catch (e) {
+                console.warn(`Warning: Could not convert '${amountStr}' to float during normalization.`, e);
+                return 0.0;
+            }
+        }
+
+        async function processCheque(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = async (e) => {
+                    let rawGeminiResponseText = '';
+                    let extractedData = {};
+
+                    try {
+                        if (apiKey === "YOUR_ACTUAL_GEMINI_API_KEY_HERE" || !apiKey) {
+                            const apiKeyWarning = document.getElementById('apiKeyWarning');
+                            if (apiKeyWarning) apiKeyWarning.classList.remove('hidden');
+                            reject(new Error("API Key not configured. Please update the HTML file with your actual API key."));
+                            return;
+                        } else {
+                            const apiKeyWarning = document.getElementById('apiKeyWarning');
+                            if (apiKeyWarning) apiKeyWarning.classList.add('hidden');
+                        }
+
+                        const base64Image = btoa(new Uint8Array(e.target.result).reduce((data, byte) => data + String.fromCharCode(byte), ''));
+
+                        const imagePreviewContainer = document.getElementById('imagePreviewContainer');
+                        const imagePreview = document.getElementById('imagePreview');
+                        if (imagePreviewContainer && imagePreview) {
+                            imagePreview.src = `data:${file.type};base64,${base64Image}`;
+                            imagePreviewContainer.classList.remove('hidden');
+                        } else {
+                            console.error("Image preview elements not found.");
+                        }
+
+                        // --- MODIFIED PROMPT FOR BETTER CROSSED CHEQUE DETECTION ---
+                        const promptTextForGemini = `
+                        Extract all specified information from this cheque image. Focus on both handwritten and printed details.
+                        If a field is not found or cannot be confidently extracted, use an empty string for its value.
+                        Prioritize the most accurate and complete extraction possible based on the visual information.
+
+                        Refinement for Accuracy and Specificity (Instructions for visual interpretation):
+                        - "Bank Name": Extract the full official bank name (e.g., "FEDERAL BANK", "AXIS BANK LTD", "LOREM BANK"). Look for clear bank logos or text on the cheque.
+                        - "Payee Name": Accurately extract the full name of the person or entity to whom the cheque is payable. Pay close attention to handwritten parts. Capture the complete name as visible.
+                        - "Cheque Number": Extract the unique cheque number, typically a 6-digit sequence. It might be clearly labeled or located in specific areas (e.g., top right, bottom left, near MICR).
+                        - "Cheque Date": Extract the date of issue. Convert to DD/MM/YYYY format. Be flexible with various date formats (e.g., "Aug. 11, 2019", "09/02/2024", "11-08-2019"). If the year is two digits (e.g., "24"), infer the full year (e.g., "2024") assuming a 21st-century context.
+                        - "IFSC Code": Extract the Indian Financial System Code, which is an 11-character alphanumeric code (typically 4 letters, 0, then 6 numbers).
+                        - "Account Number": Extract the primary account number. This is a sequence of digits. Identify the main account number associated with the bank. Ignore any extraneous characters or non-digit noise. Capture the complete sequence of digits.
+                        - "Amount Figures": Extract the numerical amount. Convert it to "X.XX" format. Handle both periods (.) and commas (,) as decimal separators, standardizing to a period. Ensure exactly two decimal places, adding zeros if necessary (e.g., "100" becomes "100.00"). Do NOT include currency symbols (like '$' or '₹') or words like "ONLY".
+                        - "Amount Words": Extract the full amount written in words (e.g., "SEVEN HUNDRED FIFTEEN AND 39/100 DOLLARS", "Thirty seven thousand eight hundred fifty only"). If the text is partially illegible or uses informal phrasing, do your best to interpret the correct numerical value from these words and convert it to its "X.XX" format in the "Normalized Amount from Words" field. Prioritize parsing common numeric words and fractional parts.
+                        - "Normalized Amount from Words": Convert the "Amount Words" extracted by you into its numerical equivalent, formatted as "X.XX". This field is crucial for cross-validation with "Amount Figures".
+                        - "MICR": Extract the Magnetic Ink Character Recognition code, usually a sequence of digits at the bottom of the cheque. It often appears as structured groups of numbers (e.g., cheque number, bank code, account type). Capture the entire sequence of numbers.
+                        - "Signature Status": Determine if the cheque is "Signed" (if a clear signature is visible) or "Not Signed" (if no clear signature is present on the signature line).
+                        - "Crossed Cheque Status": Carefully examine the upper left corner of the cheque. Determine if the cheque has **two clear, parallel lines** drawn across its face, extending from the top-left to roughly the middle or bottom-right. If these lines are present, indicating a crossing (meaning it can only be deposited into an account, not cashed over the counter), output "Crossed". Otherwise, output "Not Crossed". Be precise.
+                        - "Phone": Extract any contact phone number clearly visible on the cheque.
+
+                        Cross-Check Logic (for Gemini):
+                        Add boolean "Amount Match (Words vs Figures)" (true/false). This should be calculated by comparing "Amount Figures" with "Normalized Amount from Words". Perform a robust comparison.
+
+                        Return only a JSON object. Example format:
+                        {
+                            "Bank Name": "LOREM BANK",
+                            "Payee Name": "Mary Johnson",
+                            "Cheque Number": "0007",
+                            "Cheque Date": "11/08/2019",
+                            "IFSC Code": "",
+                            "Account Number": "001234567",
+                            "Amount Figures": "715.39",
+                            "Amount Words": "Seven hundred fifteen and 39/100",
+                            "Normalized Amount from Words": "715.39",
+                            "MICR": "456789012 6543210981 89098765432109",
+                            "Signature Status": "Signed",
+                            "Crossed Cheque Status": "Not Crossed", // This should be "Crossed" or "Not Crossed"
+                            "Amount Match (Words vs Figures)": true,
+                            "Phone": ""
+                        }
+                        `;
+
+                        const contents = [{
+                            parts: [
+                                { text: promptTextForGemini },
+                                {
+                                    inlineData: {
+                                        mimeType: file.type,
+                                        data: base64Image
+                                    }
+                                }
+                            ]
+                        }];
+
+                        const payload = { contents: contents };
+
+                        console.log(`Sending request for ${file.name} to Gemini API...`);
+                        const response = await fetch(apiUrl, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(payload)
+                        });
+
+                        if (!response.ok) {
+                            const errorBody = await response.text();
+                            console.error(`API Request failed for ${file.name}: Status ${response.status}, ${response.statusText}`, errorBody);
+                            throw new Error(`API Request failed: ${response.status} ${response.statusText}. Details: ${errorBody.substring(0, Math.min(errorBody.length, 200))}...`);
+                        }
+
+                        const result = await response.json();
+                        rawGeminiResponseText = JSON.stringify(result, null, 2);
+                        console.log(`Received raw response for ${file.name}:`, result);
+
+                        if (result.candidates && result.candidates.length > 0 &&
+                            result.candidates[0].content && result.candidates[0].content.parts &&
+                            result.candidates[0].content.parts.length > 0) {
+                            let jsonString = result.candidates[0].content.parts[0].text;
+
+                            // Clean up markdown fences (```json, ```python, ```)
+                            if (jsonString.startsWith("```python\n")) {
+                                jsonString = jsonString.substring(10, jsonString.length - 3).trim();
+                            } else if (jsonString.startsWith("```json\n")) {
+                                jsonString = jsonString.substring(8, jsonString.length - 3).trim();
+                            } else if (jsonString.startsWith("```\n")) {
+                                jsonString = jsonString.substring(4, jsonString.length - 3).trim();
+                            }
+                            if (jsonString.startsWith("json\n")) {
+                                jsonString = jsonString.substring(5).trim();
+                            }
+
+                            // Ensure it's a valid JSON string by finding first and last braces
+                            const firstBrace = jsonString.indexOf('{');
+                            const lastBrace = jsonString.lastIndexOf('}');
+
+                            if (firstBrace === -1 || lastBrace === -1 || lastBrace <= firstBrace) {
+                                throw new Error(`Could not find a valid JSON object structure in Gemini's response text. Raw extracted text: "${jsonString}"`);
+                            }
+                            jsonString = jsonString.substring(firstBrace, lastBrace + 1);
+
+                            extractedData = JSON.parse(jsonString);
+
+                            // Perform client-side amount match verification (always good to double-check)
+                            const figuresVal = normalizeAmountFigure(extractedData["Amount Figures"] || "");
+                            const wordsVal = normalizeAmountFigure(extractedData["Normalized Amount from Words"] || "");
+                            const isAmountMatch = Math.abs(figuresVal - wordsVal) < 0.01;
+                            extractedData["Amount Match (Words vs Figures) (Client Verified)"] = isAmountMatch;
+                            // Keep the Gemini-provided match if available, otherwise use client-side
+                            extractedData["Amount Match (Words vs Figures)"] = extractedData["Amount Match (Words vs Figures)"] !== undefined ? extractedData["Amount Match (Words vs Figures)"] : isAmountMatch;
+
+
+                            extractedData.filename = file.name;
+                            // Ensure "Crossed Cheque Status" is populated from Gemini, default if not found
+                            extractedData["Crossed Cheque Status"] = extractedData["Crossed Cheque Status"] || "Not Determined by AI"; // Updated default
+
+
+                            resolve(extractedData);
+                        } else {
+                            throw new Error("Gemini response missing expected data structure (candidates/content/parts).");
+                        }
+                    } catch (error) {
+                        console.error("Error processing cheque:", error);
+                        if (rawGeminiResponseText) {
+                           console.error("Raw Gemini API Response (leading to error):", rawGeminiResponseText);
+                        }
+                        reject(new Error(`Failed to process ${file.name}: ${error.message}`));
+                    }
+                };
+                reader.onerror = (error) => {
+                    reject(new Error(`Error reading file ${file.name}: ${error.message}`));
+                };
+                reader.readAsArrayBuffer(file);
+            });
+        }
+
+        function displayResults(data) {
+            const currentResultsTable = document.getElementById('resultsTable');
+            const currentResultsTitle = document.getElementById('resultsTitle');
+
+            if (currentResultsTable && currentResultsTitle) {
+                currentResultsTable.innerHTML = '';
+                if (data.length === 0) {
+                    currentResultsTitle.classList.add('hidden');
+                    currentResultsTable.innerHTML = '<p class="text-gray-500">No data extracted.</p>';
+                    return;
+                }
+
+                currentResultsTitle.classList.remove('hidden');
+
+                const table = document.createElement('table');
+                table.classList.add('w-full', 'border-collapse', 'mt-8');
+
+                const thead = document.createElement('thead');
+                const headerRow = document.createElement('tr');
+                // Updated list of possible headers to include both amount match fields
+                const allPossibleHeaders = [
+                    "filename", "Bank Name", "Payee Name", "Cheque Number", "Cheque Date",
+                    "IFSC Code", "Account Number", "Amount Figures", "Amount Words",
+                    "Normalized Amount from Words", "Amount Match (Words vs Figures)",
+                    "Amount Match (Words vs Figures) (Client Verified)", // Added this for clarity
+                    "MICR", "Signature Status", "Crossed Cheque Status", "Phone"
+                ];
+                allPossibleHeaders.forEach(headerText => {
+                    const th = document.createElement('th');
+                    th.textContent = headerText;
+                    headerRow.appendChild(th);
+                });
+                thead.appendChild(headerRow);
+                table.appendChild(thead);
+
+                const tbody = document.createElement('tbody');
+                data.forEach(rowData => {
+                    const tr = document.createElement('tr');
+                    allPossibleHeaders.forEach(headerText => {
+                        const td = document.createElement('td');
+                        td.setAttribute('data-label', headerText);
+                        // Format boolean values to "True"/"False" for better display
+                        if (typeof rowData[headerText] === 'boolean') {
+                            td.textContent = rowData[headerText] ? "True" : "False";
+                        } else {
+                            td.textContent = rowData[headerText] !== undefined ? rowData[headerText] : '';
+                        }
+                        tr.appendChild(td);
+                    });
+                    tbody.appendChild(tr);
+                });
+                table.appendChild(tbody);
+
+                currentResultsTable.appendChild(table);
+            } else {
+                console.error("Results display elements (resultsTable or resultsTitle) not found.");
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('DOM Content Loaded. Script is running.');
+
+            const chequeInput = document.getElementById('chequeInput');
+            const uploadButton = document.getElementById('uploadButton');
+            const loadingMessage = document.getElementById('loadingMessage');
+            const errorMessage = document.getElementById('errorMessage');
+            const errorText = document.getElementById('errorText');
+            const resultsDisplay = document.getElementById('resultsDisplay');
+            const resultsTable = document.getElementById('resultsTable');
+            const resultsTitle = document.getElementById('resultsTitle');
+            const imagePreviewContainer = document.getElementById('imagePreviewContainer');
+            const imagePreview = document.getElementById('imagePreview');
+            const apiKeyWarning = document.getElementById('apiKeyWarning');
+
+            const elementsToCheck = {
+                chequeInput, uploadButton, loadingMessage, errorMessage, errorText,
+                resultsDisplay, resultsTable, resultsTitle, imagePreviewContainer, imagePreview, apiKeyWarning
+            };
+
+            for (const key in elementsToCheck) {
+                if (elementsToCheck[key]) {
+                    console.log(`${key} element found.`);
+                } else {
+                    console.error(`${key} element NOT found! This might cause issues.`);
+                }
+            }
+
+            if (apiKey === "YOUR_ACTUAL_GEMINI_API_KEY_HERE" || !apiKey) {
+                if (apiKeyWarning) {
+                    apiKeyWarning.classList.remove('hidden');
+                    console.error("API Key is not configured. Please update the HTML file.");
+                    if (uploadButton) uploadButton.disabled = true;
+                }
+            } else {
+                 if (apiKeyWarning) apiKeyWarning.classList.add('hidden');
+                 if (uploadButton) uploadButton.disabled = false;
+            }
+
+            if (uploadButton) {
+                console.log('Attaching click listener to uploadButton...');
+                uploadButton.addEventListener('click', async () => {
+                    console.log('Upload button clicked! (Step 1)');
+
+                    if (apiKey === "YOUR_ACTUAL_GEMINI_API_KEY_HERE" || !apiKey) {
+                        showMessage('error', "API Key not configured. Please update the HTML file with your actual API key.");
+                        if (loadingMessage) loadingMessage.classList.add('hidden');
+                        if (apiKeyWarning) apiKeyWarning.classList.remove('hidden');
+                        return;
+                    } else {
+                        if (apiKeyWarning) apiKeyWarning.classList.add('hidden');
+                    }
+
+                    const files = chequeInput.files;
+
+                    if (imagePreviewContainer && imagePreview) {
+                        imagePreviewContainer.classList.add('hidden');
+                        imagePreview.src = '#';
+                    }
+
+                    if (files.length === 0) {
+                        showMessage('error', 'Please select at least one cheque image to upload.');
+                        if (loadingMessage) loadingMessage.classList.add('hidden');
+                        return;
+                    }
+
+                    if (loadingMessage) loadingMessage.classList.remove('hidden');
+                    if (errorMessage) errorMessage.classList.add('hidden');
+                    if (resultsDisplay) resultsDisplay.classList.add('hidden');
+                    if (resultsTable) resultsTable.innerHTML = '';
+
+                    const extractedDataArray = [];
+                    let allSuccessful = true;
+
+                    for (let i = 0; i < files.length; i++) {
+                        const file = files[i];
+                        try {
+                            const data = await processCheque(file);
+                            extractedDataArray.push(data);
+                        } catch (error) {
+                            allSuccessful = false;
+                            console.error(`Error processing file ${file.name}:`, error);
+                            extractedDataArray.push({
+                                filename: file.name,
+                                "Bank Name": "", "Payee Name": "", "Cheque Number": "", "Cheque Date": "",
+                                "IFSC Code": "", "Account Number": "", "Amount Figures": "", "Amount Words": "",
+                                "Normalized Amount from Words": "", "MICR": "", "Signature Status": "", "Phone": "",
+                                "Amount Match (Words vs Figures)": false, "Amount Match (Words vs Figures) (Client Verified)": false,
+                                "Crossed Cheque Status": "Not Determined (Processing Error)",
+                                "error": error.message
+                            });
+                        }
+                    }
+
+                    if (loadingMessage) loadingMessage.classList.add('hidden');
+                    if (resultsDisplay) resultsDisplay.classList.remove('hidden');
+
+                    if (!allSuccessful) {
+                        showMessage('error', 'Some files could not be processed. Check browser console for details.');
+                    }
+
+                    displayResults(extractedDataArray);
+                });
+            } else {
+                console.error('CRITICAL: uploadButton not found, cannot attach event listener.');
+            }
+        });
+    </script>
+</body>
+</html>
